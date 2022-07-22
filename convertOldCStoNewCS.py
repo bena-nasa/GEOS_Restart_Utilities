@@ -133,17 +133,26 @@ for var in ncFid.variables:
              else:
                 tout[i,:,:] = temp[il:iu,:]
 
-vLon = ncFidOut.createVariable('lons','f8',('nf','Ydim','Xdim'))
+center_lons = ncFidOut.createVariable('lons','f8',('nf','Ydim','Xdim'))
 setattr(ncFidOut.variables['lons'],'long_name','longitude')
 setattr(ncFidOut.variables['lons'],'units','degrees_east')
-vLat = ncFidOut.createVariable('lats','f8',('nf','Ydim','Xdim'))
+center_lats = ncFidOut.createVariable('lats','f8',('nf','Ydim','Xdim'))
 setattr(ncFidOut.variables['lats'],'long_name','latitude')
 setattr(ncFidOut.variables['lats'],'units','degrees_north')
 
-vLon[:,:,:] = ncFidEx.variables['lons'][:,:,:]
-vLat[:,:,:] = ncFidEx.variables['lats'][:,:,:]
+center_lons[:,:,:] = ncFidEx.variables['lons'][:,:,:]
+center_lats[:,:,:] = ncFidEx.variables['lats'][:,:,:]
 
 
+corner_lons = ncFidOut.createVariable('corner_lons','f8',('nf','Ydim','Xdim'))
+setattr(ncFidOut.variables['corner_lons'],'long_name','longitude')
+setattr(ncFidOut.variables['corner_lons'],'units','degrees_east')
+corner_lats = ncFidOut.createVariable('corner_lats','f8',('nf','Ydim','Xdim'))
+setattr(ncFidOut.variables['corner_lats'],'long_name','latitude')
+setattr(ncFidOut.variables['corner_lats'],'units','degrees_north')
+
+corner_lons[:,:,:] = ncFidEx.variables['lons'][:,:,:]
+corner_lats[:,:,:] = ncFidEx.variables['lats'][:,:,:]
 #-----------------
 # Closing the file
 #-----------------
