@@ -69,18 +69,18 @@ for var in ncFid.variables:
    if var not in Exclude_Var:
       temp = ncFid.variables[var][:]
       dim_size =len(temp.shape)
-      if dim_size == 3:
-         Tout = ncFidOut.createVariable(var,'f4',('time','lev','lat','lon',),fill_value=1.0e15)
+      if dim_size == 4:
+         Tout = ncFidOut.createVariable(var,'f4',('lev','lat','lon',),fill_value=1.0e15)
          for att in ncFid.variables[var].ncattrs():
             if att != "_FillValue":
                setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
-            Tout[0,:,:,:] = temp[:,:,:]
-      elif dim_size == 2:
-         Tout = ncFidOut.createVariable(var,'f4',('time','lat','lon',),fill_value=1.0e15)
+            Tout[:,:,:] = temp[0,:,:,:]
+      elif dim_size == 3:
+         Tout = ncFidOut.createVariable(var,'f4',('lat','lon',),fill_value=1.0e15)
          for att in ncFid.variables[var].ncattrs():
             if att != "_FillValue":
                setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
-            Tout[0,:,:] = temp[:,:]
+            Tout[:,:] = temp[0,:,:]
 ncFidOut.close()
 
 

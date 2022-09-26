@@ -9,8 +9,8 @@ import argparse
 
 def parse_args():
     p = argparse.ArgumentParser(description='Flatten a lat-lon to 1D')
-    p.add_argument('-i','--input',type=str,help='input file',default=None)
-    p.add_argument('-o','--output',type=str,help='output file',default=None)
+    p.add_argument('input',type=str,help='input file',default=None)
+    p.add_argument('output',type=str,help='output file',default=None)
     return vars(p.parse_args())
 
 #------------------
@@ -46,7 +46,6 @@ if haveLev:
    levSize = len(ncFid.dimensions['lev'])
 
 cRes = len(ncFid.dimensions['Xdim'])
-print cRes
 
 Xdim = ncFidOut.createDimension('lon',cRes)
 Ydim = ncFidOut.createDimension('lat',cRes*6)
@@ -78,7 +77,7 @@ if haveTime:
       setattr(ncFidOut.variables['time'],att,getattr(ncFid.variables['time'],att))
    vtimeOut[:] = range(timeSize)
 
-Exclude_Var = ['Xdim','Ydim','time','lev','lons','lats','contacts','anchor','cubed_sphere','nf','ncontact']
+Exclude_Var = ['Xdim','Ydim','time','lev','lons','lats','contacts','anchor','cubed_sphere','nf','ncontact','corner_lons','corner_lats']
 
 for var in ncFid.variables:
    if var not in Exclude_Var:
@@ -109,7 +108,6 @@ for var in ncFid.variables:
             tout = ncFidOut.createVariable(var,'f4',('time','lat','lon'),fill_value=1.0e15)
          else:
             tout = ncFidOut.createVariable(var,'f4',('lat','lon'),fill_value=1.0e15)
-         print tout.dtype,temp.dtype
          for att in ncFid.variables[var].ncattrs():
             if att != "_FillValue":
                setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
@@ -122,14 +120,8 @@ for var in ncFid.variables:
                 for k in range(cRes):
                    if haveTime:
                       tout[:,il+k,j]=temp[:,i,k,j].copy()
-                      print i,il+k,i,k,j,temp[:,i,k,j],tout[:,il+k,j]
                    else:
                       tout[il+k,j]=temp[i,k,j]
-                   #if haveTime:
-                      #tout[:,il:iu,:]=temp[:,i,:,:]
-                   #else:
-                      #tout[il:iu,:]=temp[i,:,:]
-
 
 #-----------------
 # Closing the file
