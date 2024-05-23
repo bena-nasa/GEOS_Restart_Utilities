@@ -11,6 +11,7 @@ def parse_args():
     p = argparse.ArgumentParser(description='Flatten a lat-lon to 1D')
     p.add_argument('input',type=str,help='input file',default=None)
     p.add_argument('output',type=str,help='output file',default=None)
+    p.add_argument('-s','--striptime',action='store_true',help="strip time if present")
     return vars(p.parse_args())
 
 #------------------
@@ -19,6 +20,8 @@ def parse_args():
 comm_args    = parse_args()
 Input_file   = comm_args['input']
 Output_file  = comm_args['output']
+strip_time = comm_args['striptime']
+
 ncFid = Dataset(Input_file, mode='r')
 ncFidOut = Dataset(Output_file, mode='w', format='NETCDF4')
 
@@ -38,6 +41,9 @@ for dim in ncFid.dimensions:
     if dim == 'time':
        haveTime = True
        timeSize = len(ncFid.dimensions['time'])
+
+if not haveTime:
+    strip_time = False
 
 if haveTime:
    time = ncFid.variables['time'][:]
@@ -85,9 +91,10 @@ for var in ncFid.variables:
       dim_size =len(temp.shape)
       if haveTime:
          dim_size = dim_size -1
-      
+     
+      time_in_output = haveTime and (not strip_time)
       if dim_size == 4:
-         if haveTime:
+         if time_in_output:
             tout = ncFidOut.createVariable(var,'f4',('time','lev','lat','lon'),fill_value=1.0e15)
          else:
             tout = ncFidOut.createVariable(var,'f4',('lev','lat','lon'),fill_value=1.0e15)
@@ -99,12 +106,15 @@ for var in ncFid.variables:
              iu =  cRes*(i+1)
              for j in range(levSize):
                 if haveTime:
-                   tout[:,j,il:iu,:]=temp[:,j,i,:,:]
+                   if strip_time:
+                      tout[j,il:iu,:]=temp[0,j,i,:,:]
+                   else:
+                      tout[:,j,il:iu,:]=temp[:,j,i,:,:]
                 else:
                    tout[j,il:iu,:]=temp[j,i,:,:]
 
       elif dim_size == 3: 
-         if haveTime:
+         if time_in_output:
             tout = ncFidOut.createVariable(var,'f4',('time','lat','lon'),fill_value=1.0e15)
          else:
             tout = ncFidOut.createVariable(var,'f4',('lat','lon'),fill_value=1.0e15)
@@ -119,7 +129,10 @@ for var in ncFid.variables:
              for j in range(cRes):
                 for k in range(cRes):
                    if haveTime:
-                      tout[:,il+k,j]=temp[:,i,k,j].copy()
+                      if strip_time:
+                         tout[il+k,j]=temp[0,i,k,j].copy()
+                      else:
+                         tout[:,il+k,j]=temp[:,i,k,j].copy()
                    else:
                       tout[il+k,j]=temp[i,k,j]
 
