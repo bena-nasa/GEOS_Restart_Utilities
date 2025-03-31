@@ -44,6 +44,12 @@ for dim in ncFid.dimensions:
            haveEdge = True
            edgeSize = len(ncFid.dimensions['edge'])
 
+haveUngrid1 = False
+for dim in ncFid.dimensions:
+    if dim == 'unknown_dim1':
+           haveUngrid1 = True
+           ungrid1Size = len(ncFid.dimensions['unknown_dim1'])
+
 haveTime = False
 for dim in ncFid.dimensions:
     if dim == 'time':
@@ -69,6 +75,9 @@ if haveLev:
 
 if haveEdge:
    edgeOut = ncFidOut.createDimension('edge',edgeSize)
+
+if haveUngrid1:
+   ungrid1Out = ncFidOut.createDimension('unknown_dim1',ungrid1Size)
 
 timeOut = ncFidOut.createDimension('time',1)
 
@@ -109,16 +118,13 @@ for var in ncFid.variables:
    if var not in Exclude_Var:
       temp = ncFid.variables[var][:]
       dim_size =len(temp.shape)
-      print(var)
       haveTime = 'time' in ncFid.variables[var].dimensions
       if haveTime:
          dim_size = dim_size -1
-      print(dim_size)
-      print(haveTime)
       
       if dim_size == 3:
          for dim in ncFid.variables[var].dimensions:
-             if dim == 'lev' or dim == 'edge':
+             if dim == 'lev' or dim == 'edge' or dim == 'unknown_dim1':
                 third_dim = dim
 
          if haveTime:
