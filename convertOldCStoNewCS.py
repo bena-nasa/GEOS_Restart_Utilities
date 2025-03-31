@@ -119,6 +119,7 @@ for var in ncFid.variables:
       temp = ncFid.variables[var][:]
       dim_size =len(temp.shape)
       haveTime = 'time' in ncFid.variables[var].dimensions
+      float_type = ncFid.variables[var].dtype
       if haveTime:
          dim_size = dim_size -1
       
@@ -128,9 +129,9 @@ for var in ncFid.variables:
                 third_dim = dim
 
          if haveTime:
-            tout = ncFidOut.createVariable(var,'f4',('time',third_dim,'nf','Ydim','Xdim'),fill_value=1.0e15)
+            tout = ncFidOut.createVariable(var,float_type,('time',third_dim,'nf','Ydim','Xdim'),fill_value=1.0e15)
          else:
-            tout = ncFidOut.createVariable(var,'f4',(third_dim,'nf','Ydim','Xdim'),fill_value=1.0e15)
+            tout = ncFidOut.createVariable(var,float_type,(third_dim,'nf','Ydim','Xdim'),fill_value=1.0e15)
          for att in ncFid.variables[var].ncattrs():
             if att != "_FillValue":
                setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
@@ -146,9 +147,9 @@ for var in ncFid.variables:
 
       elif dim_size == 2: 
          if haveTime:
-            tout = ncFidOut.createVariable(var,'f4',('time','nf','Ydim','Xdim'),fill_value=1.0e15)
+            tout = ncFidOut.createVariable(var,float_type,('time','nf','Ydim','Xdim'),fill_value=1.0e15)
          else:
-            tout = ncFidOut.createVariable(var,'f4',('nf','Ydim','Xdim'),fill_value=1.0e15)
+            tout = ncFidOut.createVariable(var,float_type,('nf','Ydim','Xdim'),fill_value=1.0e15)
          for att in ncFid.variables[var].ncattrs():
             if att != "_FillValue":
                setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
@@ -163,7 +164,7 @@ for var in ncFid.variables:
                 tout[i,:,:] = temp[il:iu,:]
 
       elif dim_size == 1: 
-         tout = ncFidOut.createVariable(var,'f4',('edge'),fill_value=1.0e15)
+         tout = ncFidOut.createVariable(var,float_type,('edge'),fill_value=1.0e15)
          for att in ncFid.variables[var].ncattrs():
             if att != "_FillValue":
                setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
