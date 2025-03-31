@@ -112,7 +112,7 @@ setattr(ncFidOut.variables['cubed_sphere'],'grid_mapping_name','gnomonic cubed-s
 setattr(ncFidOut.variables['cubed_sphere'],'file_format_version','2.90')
 setattr(ncFidOut.variables['cubed_sphere'],'additional_vars','contacts,orientation,anchor')
 
-Exclude_Var = ['Xdim','Ydim','time','lev','edge','lon','lat']
+Exclude_Var = ['Xdim','Ydim','time','lev','edge','lon','lat','unknown_dim1']
 
 for var in ncFid.variables:
    if var not in Exclude_Var:

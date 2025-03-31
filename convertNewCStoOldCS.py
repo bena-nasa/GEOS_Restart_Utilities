@@ -9,8 +9,8 @@ import argparse
 
 def parse_args():
     p = argparse.ArgumentParser(description='Flatten a lat-lon to 1D')
-    p.add_argument('input',type=str,help='input file',default=None)
-    p.add_argument('output',type=str,help='output file',default=None)
+    p.add_argument('-i','--input',type=str,help='input file',default=None)
+    p.add_argument('-o','--output',type=str,help='output file',default=None)
     p.add_argument('-s','--striptime',action='store_true',help="strip time if present")
     return vars(p.parse_args())
 
@@ -35,6 +35,17 @@ for dim in ncFid.dimensions:
            haveLev = True
            levSize = len(ncFid.dimensions['lev'])
 
+haveEdge = False
+for dim in ncFid.dimensions:
+    if dim == 'edge':
+           haveEdge = True
+           edgeSize = len(ncFid.dimensions['edge'])
+
+haveUnknown1 = False
+for dim in ncFid.dimensions:
+    if dim == 'unknown_dim1':
+           haveUnknown1 = True
+           unknown1Size = len(ncFid.dimensions['unknonw_dim1'])
 
 haveTime = False
 for dim in ncFid.dimensions:
@@ -58,6 +69,12 @@ Ydim = ncFidOut.createDimension('lat',cRes*6)
 
 if haveLev:
    levOut = ncFidOut.createDimension('lev',levSize)
+
+if haveEdge:
+   edgeOut = ncFidOut.createDimension('edge',edgeSize)
+
+if haveUnknown1:
+   unknown1Out = ncFidOut.createDimension('unknown_dim1',edgeSize)
 
 if haveTime:
    timeOut = ncFidOut.createDimension('time',timeSize)
@@ -83,23 +100,29 @@ if haveTime:
       setattr(ncFidOut.variables['time'],att,getattr(ncFid.variables['time'],att))
    vtimeOut[:] = range(timeSize)
 
-Exclude_Var = ['Xdim','Ydim','time','lev','lons','lats','contacts','anchor','cubed_sphere','nf','ncontact','corner_lons','corner_lats']
+Exclude_Var = ['Xdim','Ydim','time','lev','lons','edge','unknown_dim1','lats','contacts','anchor','cubed_sphere','nf','ncontact','corner_lons','corner_lats']
 
 for var in ncFid.variables:
    if var not in Exclude_Var:
       temp = ncFid.variables[var][:]
       dim_size =len(temp.shape)
+      float_type = ncFid.variables[var].dtype
+      haveTime = 'time' in ncFid.variables[var].dimensions
       if haveTime:
          dim_size = dim_size -1
+
+      for dim in ncFid.variables[var].dimensions:
+          if dim == 'lev' or dim == 'edge' or dim == 'unknown_dim1':
+             third_dim = dim    
      
       time_in_output = haveTime and (not strip_time)
       if dim_size == 4:
          if time_in_output:
-            tout = ncFidOut.createVariable(var,'f4',('time','lev','lat','lon'),fill_value=1.0e15)
+            tout = ncFidOut.createVariable(var,float_type,('time',third_dim,'lat','lon'),fill_value=1.0e15)
          else:
-            tout = ncFidOut.createVariable(var,'f4',('lev','lat','lon'),fill_value=1.0e15)
+            tout = ncFidOut.createVariable(var,float_type,(third_dim,'lat','lon'),fill_value=1.0e15)
          for att in ncFid.variables[var].ncattrs():
-            if att != "_FillValue":
+            if att != "_FillValue" and att != "grid_mapping" and att != "coordinates":
                setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
          for i in range(6):
              il =  cRes*i
@@ -115,14 +138,12 @@ for var in ncFid.variables:
 
       elif dim_size == 3: 
          if time_in_output:
-            tout = ncFidOut.createVariable(var,'f4',('time','lat','lon'),fill_value=1.0e15)
+            tout = ncFidOut.createVariable(var,float_type,('time','lat','lon'),fill_value=1.0e15)
          else:
-            tout = ncFidOut.createVariable(var,'f4',('lat','lon'),fill_value=1.0e15)
+            tout = ncFidOut.createVariable(var,float_type,('lat','lon'),fill_value=1.0e15)
          for att in ncFid.variables[var].ncattrs():
-            if att != "_FillValue":
+            if att != "_FillValue" and att != "grid_mapping" and att != "coordinates":
                setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
-         setattr(ncFidOut.variables[var],'grid_mapping','cubed_sphere')
-         setattr(ncFidOut.variables[var],'coordinates','lons lats')
          for i in range(6):
              il =  cRes*i
              iu =  cRes*(i+1)
@@ -135,6 +156,13 @@ for var in ncFid.variables:
                          tout[:,il+k,j]=temp[:,i,k,j].copy()
                    else:
                       tout[il+k,j]=temp[i,k,j]
+
+      elif dim_size == 1:
+         tout = ncFidOut.createVariable(var,float_type,('edge'),fill_value=1.0e15)
+         for att in ncFid.variables[var].ncattrs():
+            if att != "_FillValue" and att != "grid_mapping" and att != "coordinates":
+               setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
+         tout[:]=temp[:]
 
 #-----------------
 # Closing the file
