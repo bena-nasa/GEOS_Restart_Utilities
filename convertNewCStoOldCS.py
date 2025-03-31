@@ -45,7 +45,7 @@ haveUnknown1 = False
 for dim in ncFid.dimensions:
     if dim == 'unknown_dim1':
            haveUnknown1 = True
-           unknown1Size = len(ncFid.dimensions['unknonw_dim1'])
+           unknown1Size = len(ncFid.dimensions['unknown_dim1'])
 
 haveTime = False
 for dim in ncFid.dimensions:
@@ -74,7 +74,7 @@ if haveEdge:
    edgeOut = ncFidOut.createDimension('edge',edgeSize)
 
 if haveUnknown1:
-   unknown1Out = ncFidOut.createDimension('unknown_dim1',edgeSize)
+   unknown1Out = ncFidOut.createDimension('unknown_dim1',unknown1Size)
 
 if haveTime:
    timeOut = ncFidOut.createDimension('time',timeSize)
@@ -109,11 +109,12 @@ for var in ncFid.variables:
       float_type = ncFid.variables[var].dtype
       haveTime = 'time' in ncFid.variables[var].dimensions
       if haveTime:
-         dim_size = dim_size -1
+         dim_size = dim_size - 1
 
       for dim in ncFid.variables[var].dimensions:
           if dim == 'lev' or dim == 'edge' or dim == 'unknown_dim1':
              third_dim = dim    
+             third_dim_size = len(ncFid.dimensions[third_dim])
      
       time_in_output = haveTime and (not strip_time)
       if dim_size == 4:
@@ -127,7 +128,7 @@ for var in ncFid.variables:
          for i in range(6):
              il =  cRes*i
              iu =  cRes*(i+1)
-             for j in range(levSize):
+             for j in range(third_dim_size):
                 if haveTime:
                    if strip_time:
                       tout[j,il:iu,:]=temp[0,j,i,:,:]
