@@ -122,7 +122,28 @@ for var in ncFid.variables:
       float_type = ncFid.variables[var].dtype
       if haveTime:
          dim_size = dim_size -1
-      
+     
+      if dim_size == 4:
+         third_dim = ncFid.variables[var].dimensions[1]
+         fourth_dim = ncFid.variables[var].dimensions[0]
+         if haveTime:
+            tout = ncFidOut.createVariable(var,float_type,('time',fourth_dim,third_dim,'nf','Ydim','Xdim'),fill_value=1.0e15)
+         else:
+            tout = ncFidOut.createVariable(var,float_type,(fourth_dim,third_dim,'nf','Ydim','Xdim'),fill_value=1.0e15)
+         for att in ncFid.variables[var].ncattrs():
+            if att != "_FillValue":
+               setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
+         setattr(ncFidOut.variables[var],'grid_mapping','cubed_sphere')
+         setattr(ncFidOut.variables[var],'coordinates','lons lats')
+         for i in range(6):
+             il =  cRes*i
+             iu =  cRes*(i+1)
+             if haveTime:
+                tout[:,:,:,i,:,:] = temp[:,:,:,il:iu,:]
+             else:
+                tout[:,:,i,:,:] = temp[:,:,il:iu,:]
+             
+        
       if dim_size == 3:
          for dim in ncFid.variables[var].dimensions:
              if dim == 'lev' or dim == 'edge' or dim == 'unknown_dim1':
