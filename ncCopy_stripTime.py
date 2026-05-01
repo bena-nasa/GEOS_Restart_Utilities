@@ -7,7 +7,7 @@ from netCDF4 import Dataset
 import argparse
 
 def parse_args():
-    p = argparse.ArgumentParser(description='Flatten a lat-lon to 1D')
+    p = argparse.ArgumentParser(description='Copy a NetCDF file, stripping the time dimension from all variables')
     p.add_argument('input',type=str,help='input file',default=None)
     p.add_argument('output',type=str,help='output file',default=None)
     return vars(p.parse_args())
@@ -20,73 +20,75 @@ Input_file   = comm_args['input']
 Output_file  = comm_args['output']
 ncFid = Dataset(Input_file, mode='r')
 ncFidOut = Dataset(Output_file, mode='w', format='NETCDF4')
-#---------------------
-# Extracting variables
-#---------------------
 
-haveLev = False
-for dim in ncFid.dimensions:
-    if dim == 'lev':
-       haveLev = True
-   
-time = ncFid.variables['time'][:]
-if haveLev:
-   lev  = ncFid.variables['lev'][:]
-lat  = ncFid.variables['lat'][:]
-lon  = ncFid.variables['lon'][:]
-
+#---------------------
+# Copy global attributes
+#---------------------
 for att in ncFid.ncattrs():
-    setattr(ncFidOut,att,getattr(ncFid,att))
+    setattr(ncFidOut, att, getattr(ncFid, att))
 
-lonOut = ncFidOut.createDimension('lon', len(lon))
-lonsOut = ncFidOut.createVariable('lon','f4',('lon',))
-for att in ncFid.variables['lon'].ncattrs():
-    setattr(ncFidOut.variables['lon'],att,getattr(ncFid.variables['lon'],att))
-lonsOut[:] = lon
+#---------------------
+# Copy all dimensions
+#---------------------
+for dimname, dim in ncFid.dimensions.items():
+    if dimname == 'time':
+        ncFidOut.createDimension('time', 1)
+    else:
+        size = len(dim) if not dim.isunlimited() else len(dim)
+        ncFidOut.createDimension(dimname, size)
 
+#---------------------
+# Copy all variables
+#---------------------
+for varname, var in ncFid.variables.items():
+    src_dims = var.dimensions
 
-latOut = ncFidOut.createDimension('lat', len(lat))
-latsOut = ncFidOut.createVariable('lat','f4',('lat',))
-for att in ncFid.variables['lat'].ncattrs():
-    setattr(ncFidOut.variables['lat'],att,getattr(ncFid.variables['lat'],att))
-latsOut[:] = lat
+    if varname == 'time':
+        # Time variable: keep dimension but set value to 0
+        fill = getattr(var, '_FillValue', None)
+        kwargs = {}
+        if fill is not None:
+            kwargs['fill_value'] = fill
+        vout = ncFidOut.createVariable('time', var.datatype, ('time',), **kwargs)
+        for att in var.ncattrs():
+            if att != '_FillValue':
+                setattr(vout, att, getattr(var, att))
+        vout[:] = 0
 
-if haveLev:
-   levOut = ncFidOut.createDimension('lev', len(lev))
-   levsOut = ncFidOut.createVariable('lev','f4',('lev',))
-   for att in ncFid.variables['lev'].ncattrs():
-       setattr(ncFidOut.variables['lev'],att,getattr(ncFid.variables['lev'],att))
-   levsOut[:] = lev
+    elif 'time' in src_dims:
+        # Data variable that depends on time: strip the time dimension
+        new_dims = tuple(d for d in src_dims if d != 'time')
+        fill = getattr(var, '_FillValue', None)
+        kwargs = {}
+        if fill is not None:
+            kwargs['fill_value'] = fill
+        vout = ncFidOut.createVariable(varname, var.datatype, new_dims, **kwargs)
+        for att in var.ncattrs():
+            if att != '_FillValue':
+                setattr(vout, att, getattr(var, att))
+        # Index out the time dimension (assumed to be first and size 1)
+        time_idx = src_dims.index('time')
+        slices = tuple(0 if i == time_idx else slice(None) for i in range(len(src_dims)))
+        vout[:] = var[slices]
 
-timeOut = ncFidOut.createDimension('time', 1)
-timesOut = ncFidOut.createVariable('time','f4',('time',))
-for att in ncFid.variables['time'].ncattrs():
-    setattr(ncFidOut.variables['time'],att,getattr(ncFid.variables['time'],att))
-timesOut[:] = 0
+    else:
+        # Variable without time: copy as-is
+        fill = getattr(var, '_FillValue', None)
+        kwargs = {}
+        if fill is not None:
+            kwargs['fill_value'] = fill
+        vout = ncFidOut.createVariable(varname, var.datatype, src_dims, **kwargs)
+        for att in var.ncattrs():
+            if att != '_FillValue':
+                setattr(vout, att, getattr(var, att))
+        # Handle scalar variables (e.g., cubed_sphere grid mapping)
+        if var.dimensions:
+            vout[:] = var[:]
+        else:
+            vout.assignValue(var.getValue())
 
-Exclude_Var = ['lon','lat','time','lev']
-for var in ncFid.variables:
-   if var not in Exclude_Var:
-      temp = ncFid.variables[var][:]
-      dim_size =len(temp.shape)
-      if dim_size == 4:
-         Tout = ncFidOut.createVariable(var,'f4',('lev','lat','lon',),fill_value=1.0e15)
-         for att in ncFid.variables[var].ncattrs():
-            if att != "_FillValue":
-               setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
-            Tout[:,:,:] = temp[0,:,:,:]
-      elif dim_size == 3:
-         Tout = ncFidOut.createVariable(var,'f4',('lat','lon',),fill_value=1.0e15)
-         for att in ncFid.variables[var].ncattrs():
-            if att != "_FillValue":
-               setattr(ncFidOut.variables[var],att,getattr(ncFid.variables[var],att))
-            Tout[:,:] = temp[0,:,:]
+#-----------------
+# Closing the files
+#-----------------
 ncFidOut.close()
-
-
-#-----------------
-# Closing the file
-#-----------------
 ncFid.close()
-
-
